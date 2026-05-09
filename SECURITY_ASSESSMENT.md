@@ -2,7 +2,7 @@
 ## TaskFlow MVP — Independent Security Audit
 
 **Prepared for:** TaskFlow Founders (Pre-Seed Investor Review)
-**Prepared by:** [Student Name], Security Consultant
+**Prepared by:** Devin Hickman, Security Consultant
 **Date:** May 2026
 **Repository:** https://github.com/bunglest/week6-security-assessment
 
