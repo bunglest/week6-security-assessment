@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TaskFlow — Login</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+    header { background: #16213e; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.2rem; letter-spacing: 1px; }
+    #user-info { font-size: 0.85rem; opacity: 0.8; }
+    .container { max-width: 860px; margin: 32px auto; padding: 0 16px; }
+    .card { background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.1); margin-bottom: 20px; }
+    h2 { font-size: 1rem; margin-bottom: 16px; color: #16213e; }
+    input, textarea { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; margin-bottom: 10px; }
+    button { padding: 9px 20px; background: #0f3460; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    button:hover { background: #16213e; }
+    button.danger { background: #c0392b; }
+    .task-item { border: 1px solid #e8e8e8; border-radius: 6px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .task-body { flex: 1; }
+    .task-id { font-size: 0.75rem; color: #888; margin-bottom: 4px; }
+    .task-title { font-weight: 600; margin-bottom: 4px; }
+    .task-desc { font-size: 0.85rem; color: #555; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tab { padding: 8px 18px; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; background: white; color: #0f3460; font-size: 0.85rem; font-weight: 500; min-width: 90px; }
+    .tab:hover { background: #eef2f7; }
+    .tab.active { background: #0f3460; color: white; border-color: #0f3460; }
+    #auth-section, #app-section { display: none; }
+    .row { display: flex; gap: 10px; }
+    .row input { flex: 1; }
+    .idor-result { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px; margin-top: 10px; font-size: 0.85rem; white-space: pre-wrap; }
+    .msg { padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; margin-top: 8px; }
+    .msg.error { background: #fdecea; color: #c0392b; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>TaskFlow</h1>
+  <span id="user-info"></span>
+</header>
+
+<div class="container">
+  <!-- AUTH SECTION -->
+  <div id="auth-section">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('login')">Login</button>
+      <button class="tab" onclick="showTab('register')">Register</button>
+    </div>
+
+    <div id="login-tab" class="card">
+      <h2>Login</h2>
+      <input id="login-user" type="text" placeholder="Username" />
+      <input id="login-pass" type="password" placeholder="Password" />
+      <button onclick="doLogin()">Login</button>
+      <div id="login-msg"></div>
+    </div>
+
+    <div id="register-tab" class="card" style="display:none">
+      <h2>Register</h2>
+      <input id="reg-user" type="text" placeholder="Username" />
+      <input id="reg-pass" type="password" placeholder="Password" />
+      <button onclick="doRegister()">Register</button>
+      <div id="reg-msg"></div>
+    </div>
+  </div>
+
+  <!-- APP SECTION -->
+  <div id="app-section">
+    <div class="card">
+      <h2>Create Task</h2>
+      <input id="task-title" type="text" placeholder="Task title" />
+      <textarea id="task-desc" rows="2" placeholder="Description"></textarea>
+      <button onclick="createTask()">Add Task</button>
+      <div id="task-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>My Tasks</h2>
+      <div id="task-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>Fetch Task by ID <span style="font-size:0.75rem;font-weight:400;color:#888">(IDOR demo)</span></h2>
+      <div class="row">
+        <input id="idor-id" type="number" placeholder="Task ID (try 1)" />
+        <button onclick="fetchById()">Fetch</button>
+      </div>
+      <div id="idor-result"></div>
+    </div>
+
+    <div class="card">
+      <h2>Upload Attachment <span style="font-size:0.75rem;font-weight:400;color:#888">(no file type check)</span></h2>
+      <input type="file" id="file-input" />
+      <button onclick="uploadFile()" style="margin-top:6px">Upload</button>
+      <div id="upload-msg"></div>
+    </div>
+
+    <div style="text-align:right">
+      <button class="danger" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let token = localStorage.getItem('token');
+  let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+
+  function init() {
+    if (token) {
+      document.getElementById('app-section').style.display = 'block';
+      document.getElementById('user-info').textContent = `Logged in as: ${currentUser?.username}`;
+      loadTasks();
+    } else {
+      document.getElementById('auth-section').style.display = 'block';
+    }
+  }
+
+  function showTab(tab) {
+    document.getElementById('login-tab').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('register-tab').style.display = tab === 'register' ? 'block' : 'none';
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i===0 && tab==='login') || (i===1 && tab==='register')));
+  }
+
+  async function doLogin() {
+    const username = document.getElementById('login-user').value;
+    const password = document.getElementById('login-pass').value;
+    const res = await fetch('/api/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMsg('login-msg', data.error, 'error');
+      return;
+    }
+    token = data.token;
+    currentUser = data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    location.reload();
+  }
+
+  async function doRegister() {
+    const username = document.getElementById('reg-user').value;
+    const password = document.getElementById('reg-pass').value;
+    const res = await fetch('/api/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    setMsg('reg-msg', res.ok ? 'Registered! Please login.' : data.error, res.ok ? 'success' : 'error');
+  }
+
+  async function loadTasks() {
+    const res = await fetch('/api/tasks', { headers: { Authorization: `Bearer ${token}` } });
+    const tasks = await res.json();
+    const list = document.getElementById('task-list');
+    if (!tasks.length) { list.innerHTML = '<p style="color:#888;font-size:0.85rem">No tasks yet.</p>'; return; }
+    list.innerHTML = tasks.map(t => `
+      <div class="task-item">
+        <div class="task-body">
+          <div class="task-id">ID: ${t.id}</div>
+          <!-- VULNERABILITY: innerHTML renders raw HTML — enables XSS -->
+          <div class="task-title">${t.title}</div>
+          <div class="task-desc">${t.description || ''}</div>
+        </div>
+        <button class="danger" style="margin-left:12px;padding:5px 12px;font-size:0.8rem" onclick="deleteTask(${t.id})">Delete</button>
+      </div>
+    `).join('');
+  }
+
+  async function createTask() {
+    const title = document.getElementById('task-title').value;
+    const description = document.getElementById('task-desc').value;
+    const res = await fetch('/api/tasks', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title, description })
+    });
+    const data = await res.json();
+    if (!res.ok) { setMsg('task-msg', data.error, 'error'); return; }
+    document.getElementById('task-title').value = '';
+    document.getElementById('task-desc').value = '';
+    loadTasks();
+  }
+
+  async function deleteTask(id) {
+    await fetch(`/api/tasks/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    loadTasks();
+  }
+
+  async function fetchById() {
+    const id = document.getElementById('idor-id').value;
+    const res = await fetch(`/api/tasks/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    const el = document.getElementById('idor-result');
+    el.className = 'idor-result';
+    el.textContent = JSON.stringify(data, null, 2);
+  }
+
+  async function uploadFile() {
+    const fileInput = document.getElementById('file-input');
+    if (!fileInput.files[0]) { setMsg('upload-msg', 'Select a file first', 'error'); return; }
+    const form = new FormData();
+    form.append('file', fileInput.files[0]);
+    const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+    const data = await res.json();
+    setMsg('upload-msg', res.ok ? `Uploaded: ${data.originalName} → ${data.path}` : data.error, res.ok ? 'success' : 'error');
+  }
+
+  function logout() {
+    localStorage.clear();
+    location.reload();
+  }
+
+  function setMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.className = `msg ${type}`;
+    el.textContent = text;
+  }
+
+  init();
+</script>
+</body>
+</html>

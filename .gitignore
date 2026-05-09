@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# env files (never commit real secrets)
+.env
+
+# runtime data
+*.sqlite
+*.sqlite3
+*.db
+
+# uploaded files
+uploads/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# logs
+*.log
+npm-debug.log*
